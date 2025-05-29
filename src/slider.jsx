@@ -10,7 +10,6 @@ export default function VideoSlider() {
   const [loadedFiles, setLoadedFiles] = useState(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
   const videoRefs = useRef({});
-  const [userHasUnmuted, setUserHasUnmuted] = useState(false);
 
   const loadVideoFile = async (index) => {
     if (index >= videoFiles.length || loadedFiles.has(videoFiles[index])) return;
@@ -18,23 +17,16 @@ export default function VideoSlider() {
     try {
       const response = await fetch(videoFiles[index]);
       const data = await response.json();
-
-      // Assuming data is an array of video URLs (strings)
-      // Filter out URLs that are already in videos state
       const newVideos = data.filter((url) => !videos.includes(url));
-
       if (newVideos.length > 0) {
         setVideos((prev) => [...prev, ...newVideos]);
       }
-
       setLoadedFiles((prev) => new Set(prev).add(videoFiles[index]));
     } catch (err) {
       console.error("Failed to load", videoFiles[index], err);
     }
   };
 
-
-  // Initial load
   useEffect(() => {
     loadVideoFile(0);
   }, []);
@@ -50,9 +42,8 @@ export default function VideoSlider() {
       Object.values(videoRefs.current).forEach((video) => video?.pause());
 
       const currentVideo = videoRefs.current[index];
-
-      // Try autoplay
       if (currentVideo) {
+        currentVideo.muted = index === 0; // Only first video muted
         const playPromise = currentVideo.play();
         if (playPromise !== undefined) {
           playPromise.catch((err) => {
@@ -61,7 +52,7 @@ export default function VideoSlider() {
         }
       }
 
-      // Lazy-load next JSON
+      // Lazy load next video file
       if (
         index === videos.length - 1 &&
         loadedFiles.size < videoFiles.length
@@ -71,15 +62,27 @@ export default function VideoSlider() {
     };
 
     emblaApi.on("select", onSelect);
-    onSelect(); // initial
+    onSelect();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        onSelect();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [emblaApi, videos, loadedFiles]);
 
   const handleVideoEnd = (index) => {
     const nextIndex = index + 1;
     if (videoRefs.current[nextIndex]) {
       emblaApi.scrollTo(nextIndex);
-      videoRefs.current[nextIndex]
-        ?.play()
+      const nextVideo = videoRefs.current[nextIndex];
+      nextVideo.muted = nextIndex === 0; // Again, only first video muted
+      nextVideo
+        .play()
         .catch((err) => console.warn("Next video autoplay failed", err));
     }
   };
@@ -99,15 +102,13 @@ export default function VideoSlider() {
                   else delete videoRefs.current[index];
                 }}
                 src={src}
-                onVolumeChange={(e) => {
-                  if (!e.target.muted) setUserHasUnmuted(true);
-                }}
                 controls
                 autoPlay={index === currentIndex}
-                muted={!userHasUnmuted}
+                muted={index === 0} // only first video muted
                 onEnded={() => handleVideoEnd(index)}
                 playsInline
                 className="video"
+                preload="auto"
               />
             </div>
           ))}
