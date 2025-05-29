@@ -19,18 +19,20 @@ export default function VideoSlider() {
       const response = await fetch(videoFiles[index]);
       const data = await response.json();
 
-      // Deduplicate based on video src URL
-      const newVideos = data.filter(
-        (v) => !videos.includes(v)
-      );
+      // Assuming data is an array of video URLs (strings)
+      // Filter out URLs that are already in videos state
+      const newVideos = data.filter((url) => !videos.includes(url));
 
-      setVideos((prev) => [...prev, ...newVideos]);
+      if (newVideos.length > 0) {
+        setVideos((prev) => [...prev, ...newVideos]);
+      }
 
       setLoadedFiles((prev) => new Set(prev).add(videoFiles[index]));
     } catch (err) {
       console.error("Failed to load", videoFiles[index], err);
     }
   };
+
 
   // Initial load
   useEffect(() => {
