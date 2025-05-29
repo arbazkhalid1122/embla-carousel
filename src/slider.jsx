@@ -7,19 +7,26 @@ const videoFiles = ["/videos1.json", "/videos2.json", "/videos3.json"];
 export default function VideoSlider() {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
   const [videos, setVideos] = useState([]);
-  const [loadedIndex, setLoadedIndex] = useState(0); // which JSON files are loaded
+  const [loadedFiles, setLoadedFiles] = useState(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
   const videoRefs = useRef({});
   const [userHasUnmuted, setUserHasUnmuted] = useState(false);
 
   const loadVideoFile = async (index) => {
-    if (index >= videoFiles.length) return;
+    if (index >= videoFiles.length || loadedFiles.has(videoFiles[index])) return;
 
     try {
       const response = await fetch(videoFiles[index]);
       const data = await response.json();
-      setVideos((prev) => [...prev, ...data]);
-      setLoadedIndex(index + 1); // mark as loaded
+
+      // Deduplicate based on video src URL
+      const newVideos = data.filter(
+        (v) => !videos.includes(v)
+      );
+
+      setVideos((prev) => [...prev, ...newVideos]);
+
+      setLoadedFiles((prev) => new Set(prev).add(videoFiles[index]));
     } catch (err) {
       console.error("Failed to load", videoFiles[index], err);
     }
@@ -40,32 +47,38 @@ export default function VideoSlider() {
       // Pause all videos
       Object.values(videoRefs.current).forEach((video) => video?.pause());
 
-      // Play current
       const currentVideo = videoRefs.current[index];
-      currentVideo?.play().catch((err) => {
-        console.warn("Autoplay failed", err);
-      });
 
-      // Check if we need to load next file
+      // Try autoplay
+      if (currentVideo) {
+        const playPromise = currentVideo.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn("Autoplay failed", err);
+          });
+        }
+      }
+
+      // Lazy-load next JSON
       if (
-        index === videos.length - 1 && // on last video
-        loadedIndex < videoFiles.length // still more to load
+        index === videos.length - 1 &&
+        loadedFiles.size < videoFiles.length
       ) {
-        loadVideoFile(loadedIndex);
+        loadVideoFile(loadedFiles.size);
       }
     };
 
     emblaApi.on("select", onSelect);
     onSelect(); // initial
-  }, [emblaApi, videos, loadedIndex]);
+  }, [emblaApi, videos, loadedFiles]);
 
   const handleVideoEnd = (index) => {
     const nextIndex = index + 1;
     if (videoRefs.current[nextIndex]) {
       emblaApi.scrollTo(nextIndex);
-      videoRefs.current[nextIndex]?.play().catch((err) => {
-        console.warn("Next video autoplay failed", err);
-      });
+      videoRefs.current[nextIndex]
+        ?.play()
+        .catch((err) => console.warn("Next video autoplay failed", err));
     }
   };
 
@@ -89,7 +102,7 @@ export default function VideoSlider() {
                 }}
                 controls
                 autoPlay={index === currentIndex}
-                muted={index === 0 && !userHasUnmuted}
+                muted={!userHasUnmuted}
                 onEnded={() => handleVideoEnd(index)}
                 playsInline
                 className="video"
