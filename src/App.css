@@ -104,7 +104,7 @@ body {
   }
 
   .video {
-    max-height: 200px !important;
+    max-height: 200px;
     /* smaller max height for mobile */
   }
 }
@@ -137,7 +137,7 @@ body {
   user-select: none;
   transition: background 0.3s ease;
   padding: 0.4rem;
-  font-size: 25px;
+  font-size: 20px;
   z-index: 10;
   display: flex;
   justify-content: center;
@@ -150,9 +150,9 @@ body {
 }
 
 .embla__button--prev {
-  left: 3px;
+  left: 10px;
 }
 
 .embla__button--next {
-  right: 3px;
+  right: 10px;
 }

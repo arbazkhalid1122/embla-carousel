@@ -83,13 +83,7 @@ export default function VideoSlider() {
     emblaApi?.scrollNext();
   };
 
-  const shouldLoad = (index) => {
-    const should = index >= currentIndex - 1 && index <= currentIndex + 2;
-    if (!should) {
-      console.log(`Video at index ${index} not loaded yet`);
-    }
-    return should;
-  };
+
 
   return (
     <div className="embla">
@@ -97,34 +91,31 @@ export default function VideoSlider() {
         <div className="embla__container">
           {videos.map((src, index) => (
             <div className="embla__slide" key={index}>
-              {shouldLoad(index) ? (
-                <video
-                  ref={(el) => {
-                    if (el) {
-                      videoRefs.current[index] = el;
-                      console.log(`Video element mounted at index: ${index}`);
-                    } else {
-                      delete videoRefs.current[index];
-                      console.log(`Video element unmounted at index: ${index}`);
-                    }
-                  }}
-                  src={src}
-                  onVolumeChange={(e) => {
-                    if (!e.target.muted) {
-                      setUserHasUnmuted(true);
-                      console.log("User unmuted — enabling sound for upcoming videos");
-                    }
-                  }}
-                  controls
-                  autoPlay={index === currentIndex}
-                  muted={index === 0 && !userHasUnmuted}
-                  onEnded={() => handleVideoEnd(index)}
-                  playsInline
-                  className="video"
-                />
-              ) : (
-                <div className="video-placeholder">Loading...</div>
-              )}
+              {/* {shouldLoad(index) ? ( */}
+              <video
+                ref={(el) => {
+                  if (el) {
+                    videoRefs.current[index] = el;
+                    console.log(`Video element mounted at index: ${index}`);
+                  } else {
+                    delete videoRefs.current[index];
+                    console.log(`Video element unmounted at index: ${index}`);
+                  }
+                }}
+                src={src}
+                onVolumeChange={(e) => {
+                  if (!e.target.muted) {
+                    setUserHasUnmuted(true);
+                    console.log("User unmuted — enabling sound for upcoming videos");
+                  }
+                }}
+                controls
+                autoPlay={index === currentIndex}
+                muted={index === 0 && !userHasUnmuted}
+                onEnded={() => handleVideoEnd(index)}
+                playsInline
+                className="video"
+              />
             </div>
           ))}
         </div>
@@ -146,6 +137,6 @@ export default function VideoSlider() {
           pointerEvents: currentIndex === videos.length - 1 ? "none" : "auto",
         }}
       />
-    </div>
+    </div >
   );
 }
