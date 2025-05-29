@@ -2,88 +2,75 @@ import React, { useEffect, useState, useRef } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { GrNext, GrPrevious } from "react-icons/gr";
 
+const videoFiles = ["/videos1.json", "/videos2.json", "/videos3.json"];
+
 export default function VideoSlider() {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
   const [videos, setVideos] = useState([]);
+  const [loadedIndex, setLoadedIndex] = useState(0); // which JSON files are loaded
   const [currentIndex, setCurrentIndex] = useState(0);
   const videoRefs = useRef({});
   const [userHasUnmuted, setUserHasUnmuted] = useState(false);
 
-  // Fetch all videos once
+  const loadVideoFile = async (index) => {
+    if (index >= videoFiles.length) return;
+
+    try {
+      const response = await fetch(videoFiles[index]);
+      const data = await response.json();
+      setVideos((prev) => [...prev, ...data]);
+      setLoadedIndex(index + 1); // mark as loaded
+    } catch (err) {
+      console.error("Failed to load", videoFiles[index], err);
+    }
+  };
+
+  // Initial load
   useEffect(() => {
-    const fetchVideos = async () => {
-      try {
-        const response = await fetch("/videos1.json");
-        const data = await response.json();
-        setVideos(data);
-        console.log("Fetched videos:", data);
-      } catch (err) {
-        console.error("Error fetching videos:", err);
-      }
-    };
-    fetchVideos();
+    loadVideoFile(0);
   }, []);
 
-  // Re-init Embla and play current video
   useEffect(() => {
     if (!emblaApi) return;
 
     const onSelect = () => {
       const index = emblaApi.selectedScrollSnap();
       setCurrentIndex(index);
-      console.log("Slide selected:", index);
 
-      // Pause all
-      Object.entries(videoRefs.current).forEach(([key, video]) => {
-        if (video) {
-          video.pause();
-          console.log(`Paused video at index: ${key}`);
-        }
+      // Pause all videos
+      Object.values(videoRefs.current).forEach((video) => video?.pause());
+
+      // Play current
+      const currentVideo = videoRefs.current[index];
+      currentVideo?.play().catch((err) => {
+        console.warn("Autoplay failed", err);
       });
 
-      // Play current video
-      const currentVideo = videoRefs.current[index];
-      if (currentVideo) {
-        currentVideo.play().then(() => {
-          console.log(`Playing video at index: ${index}`);
-        }).catch((err) => {
-          console.warn(`Autoplay blocked for video at index ${index}`, err);
-        });
+      // Check if we need to load next file
+      if (
+        index === videos.length - 1 && // on last video
+        loadedIndex < videoFiles.length // still more to load
+      ) {
+        loadVideoFile(loadedIndex);
       }
     };
 
     emblaApi.on("select", onSelect);
-    onSelect(); // Initial
-  }, [emblaApi]);
+    onSelect(); // initial
+  }, [emblaApi, videos, loadedIndex]);
 
   const handleVideoEnd = (index) => {
     const nextIndex = index + 1;
-    console.log(`Video at index ${index} ended.`);
-
     if (videoRefs.current[nextIndex]) {
-      console.log(`Scrolling to and attempting to play next video at index ${nextIndex}`);
       emblaApi.scrollTo(nextIndex);
-      videoRefs.current[nextIndex].play().then(() => {
-        console.log(`Playing next video at index: ${nextIndex}`);
-      }).catch((err) => {
-        console.warn(`Autoplay blocked for next video at index ${nextIndex}`, err);
+      videoRefs.current[nextIndex]?.play().catch((err) => {
+        console.warn("Next video autoplay failed", err);
       });
-    } else {
-      console.log(`Next video at index ${nextIndex} not loaded yet.`);
     }
   };
 
-  const scrollPrev = () => {
-    console.log("Scroll Prev clicked");
-    emblaApi?.scrollPrev();
-  };
-
-  const scrollNext = () => {
-    console.log("Scroll Next clicked");
-    emblaApi?.scrollNext();
-  };
-
-
+  const scrollPrev = () => emblaApi?.scrollPrev();
+  const scrollNext = () => emblaApi?.scrollNext();
 
   return (
     <div className="embla">
@@ -91,23 +78,14 @@ export default function VideoSlider() {
         <div className="embla__container">
           {videos.map((src, index) => (
             <div className="embla__slide" key={index}>
-              {/* {shouldLoad(index) ? ( */}
               <video
                 ref={(el) => {
-                  if (el) {
-                    videoRefs.current[index] = el;
-                    console.log(`Video element mounted at index: ${index}`);
-                  } else {
-                    delete videoRefs.current[index];
-                    console.log(`Video element unmounted at index: ${index}`);
-                  }
+                  if (el) videoRefs.current[index] = el;
+                  else delete videoRefs.current[index];
                 }}
                 src={src}
                 onVolumeChange={(e) => {
-                  if (!e.target.muted) {
-                    setUserHasUnmuted(true);
-                    console.log("User unmuted — enabling sound for upcoming videos");
-                  }
+                  if (!e.target.muted) setUserHasUnmuted(true);
                 }}
                 controls
                 autoPlay={index === currentIndex}
@@ -123,20 +101,20 @@ export default function VideoSlider() {
 
       <GrPrevious
         className="embla__button embla__button--prev"
-        color="black"
         onClick={scrollPrev}
-        style={{ opacity: currentIndex === 0 ? 0.5 : 1, pointerEvents: currentIndex === 0 ? "none" : "auto" }}
+        style={{
+          opacity: currentIndex === 0 ? 0.5 : 1,
+          pointerEvents: currentIndex === 0 ? "none" : "auto",
+        }}
       />
-
       <GrNext
         className="embla__button embla__button--next"
-        color="black"
         onClick={scrollNext}
         style={{
           opacity: currentIndex === videos.length - 1 ? 0.5 : 1,
           pointerEvents: currentIndex === videos.length - 1 ? "none" : "auto",
         }}
       />
-    </div >
+    </div>
   );
 }
