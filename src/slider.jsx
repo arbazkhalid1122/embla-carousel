@@ -89,13 +89,12 @@ export default function VideoSlider() {
 
   const scrollPrev = () => emblaApi?.scrollPrev();
   const scrollNext = () => emblaApi?.scrollNext();
-  console.log(videos, 'videos');
 
   return (
     <div className="embla">
       <div className="embla__viewport" ref={emblaRef}>
         <div className="embla__container">
-          {videos.map((src, index) => (
+          {[...new Set(videos)].map((src, index) => (
             <div className="embla__slide" key={index}>
               <video
                 ref={(el) => {
@@ -105,7 +104,7 @@ export default function VideoSlider() {
                 src={src}
                 controls
                 autoPlay={index === currentIndex}
-                muted={index === 0} // only first video muted
+                muted={index === 0}
                 onEnded={() => handleVideoEnd(index)}
                 playsInline
                 className="video"
