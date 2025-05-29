@@ -17,7 +17,7 @@ export default function VideoSlider() {
     try {
       const response = await fetch(videoFiles[index]);
       const data = await response.json();
-      const newVideos = data.filter((url) => !videos.includes(url));
+      const newVideos = data.filter((url) => videos.indexOf(url) === -1);
       if (newVideos.length > 0) {
         setVideos((prev) => [...prev, ...newVideos]);
       }
@@ -89,6 +89,7 @@ export default function VideoSlider() {
 
   const scrollPrev = () => emblaApi?.scrollPrev();
   const scrollNext = () => emblaApi?.scrollNext();
+  console.log(videos, 'videos');
 
   return (
     <div className="embla">
