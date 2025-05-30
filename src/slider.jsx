@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import useEmblaCarousel from "embla-carousel-react";
-import { GrNext } from "react-icons/gr";
+import { GrNext, GrPrevious } from "react-icons/gr";
 
 const videoJSON = "/videos1.json";
 const MAX_VIDEOS = 3;
@@ -55,6 +55,13 @@ export default function VideoSlider() {
     }
   };
 
+  const goToPrev = () => {
+    if (startIndex > 0) {
+      setStartIndex((prev) => prev - 1);
+    }
+  };
+
+
 
   const handleVideoEnd = () => {
     goToNext();
@@ -84,14 +91,11 @@ export default function VideoSlider() {
           ))}
         </div>
       </div>
-
-      {/* Only show next button if there are more videos */}
-      {/* {startIndex + MAX_VIDEOS < videoList.length && ( */}
+      <GrPrevious className="embla__button embla__button--prev" onClick={goToPrev} />
       <GrNext
         className="embla__button embla__button--next"
         onClick={goToNext}
       />
-      {/* )} */}
     </div>
   );
 }
