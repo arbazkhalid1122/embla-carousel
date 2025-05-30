@@ -16,8 +16,10 @@ export default function VideoSlider() {
   useEffect(() => {
     const loadVideos = async () => {
       try {
+        console.log("Fetching video list from", videoJSON);
         const res = await fetch(videoJSON);
         const data = await res.json();
+        console.log("Video list loaded:", data);
         setVideoList(data);
       } catch (err) {
         console.error("Failed to load videos", err);
@@ -31,11 +33,16 @@ export default function VideoSlider() {
 
     const onSelect = () => {
       const selected = emblaApi.selectedScrollSnap();
+      console.log("Embla selected slide index:", selected);
 
-      Object.values(videoRefs.current).forEach((video) => video?.pause?.());
+      Object.values(videoRefs.current).forEach((video) => {
+        console.log("Pausing video");
+        video?.pause?.();
+      });
 
       const currentVideo = videoRefs.current[selected];
       if (currentVideo) {
+        console.log("Playing video at index:", selected);
         currentVideo.muted = true;
         currentVideo
           .play()
@@ -43,27 +50,43 @@ export default function VideoSlider() {
       }
     };
 
+    console.log("Setting up Embla onSelect event");
     emblaApi.on("select", onSelect);
     onSelect();
 
-    return () => emblaApi?.off("select", onSelect);
+    return () => {
+      emblaApi?.off("select", onSelect);
+    };
   }, [emblaApi, visibleVideos]);
 
   const goToNext = () => {
+    console.log("Navigating to next video");
     if (startIndex < videoList.length - 1) {
-      setStartIndex((prev) => prev + 1);
+      setStartIndex((prev) => {
+        const next = prev + 1;
+        console.log("Updated start index:", next);
+        return next;
+      });
+    } else {
+      console.log("Already at the last video");
     }
   };
 
   const goToPrev = () => {
+    console.log("Navigating to previous video");
     if (startIndex > 0) {
-      setStartIndex((prev) => prev - 1);
+      setStartIndex((prev) => {
+        const next = prev - 1;
+        console.log("Updated start index:", next);
+        return next;
+      });
+    } else {
+      console.log("Already at the first video");
     }
   };
 
-
-
   const handleVideoEnd = () => {
+    console.log("Video ended, moving to next");
     goToNext();
   };
 
@@ -75,8 +98,12 @@ export default function VideoSlider() {
             <div className="embla__slide" key={startIndex + index}>
               <video
                 ref={(el) => {
-                  if (el) videoRefs.current[index] = el;
-                  else delete videoRefs.current[index];
+                  if (el) {
+                    console.log("Setting ref for video index:", index);
+                    videoRefs.current[index] = el;
+                  } else {
+                    delete videoRefs.current[index];
+                  }
                 }}
                 src={src}
                 controls
@@ -92,10 +119,7 @@ export default function VideoSlider() {
         </div>
       </div>
       <GrPrevious className="embla__button embla__button--prev" onClick={goToPrev} />
-      <GrNext
-        className="embla__button embla__button--next"
-        onClick={goToNext}
-      />
+      <GrNext className="embla__button embla__button--next" onClick={goToNext} />
     </div>
   );
 }
