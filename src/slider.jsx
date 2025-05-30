@@ -11,7 +11,13 @@ export default function VideoSlider() {
   const [startIndex, setStartIndex] = useState(0);
   const videoRefs = useRef({});
 
-  const visibleVideos = videoList.slice(startIndex, Math.min(startIndex + MAX_VIDEOS, videoList.length));
+  let visibleVideos = videoList.slice(startIndex, startIndex + MAX_VIDEOS);
+
+  // Always ensure 3 items
+  if (visibleVideos.length < MAX_VIDEOS) {
+    const padCount = MAX_VIDEOS - visibleVideos.length;
+    visibleVideos = [...visibleVideos, ...Array(padCount).fill(null)];
+  }
 
   useEffect(() => {
     const loadVideos = async () => {
@@ -96,26 +102,31 @@ export default function VideoSlider() {
         <div className="embla__container">
           {visibleVideos.map((src, index) => (
             <div className="embla__slide" key={startIndex + index}>
-              <video
-                ref={(el) => {
-                  if (el) {
-                    console.log("Setting ref for video index:", index);
-                    videoRefs.current[index] = el;
-                  } else {
-                    delete videoRefs.current[index];
-                  }
-                }}
-                src={src}
-                controls
-                autoPlay={true}
-                muted
-                playsInline
-                preload="auto"
-                onEnded={index === 0 ? handleVideoEnd : undefined}
-                className="video"
-              />
+              {src ? (
+                <video
+                  ref={(el) => {
+                    if (el) {
+                      console.log("Setting ref for video index:", index);
+                      videoRefs.current[index] = el;
+                    } else {
+                      delete videoRefs.current[index];
+                    }
+                  }}
+                  src={src}
+                  controls
+                  autoPlay
+                  muted
+                  playsInline
+                  preload="auto"
+                  onEnded={index === 0 ? handleVideoEnd : undefined}
+                  className="video"
+                />
+              ) : (
+                <div className="video placeholder" />
+              )}
             </div>
           ))}
+
         </div>
       </div>
       <GrPrevious className="embla__button embla__button--prev" onClick={goToPrev} />
