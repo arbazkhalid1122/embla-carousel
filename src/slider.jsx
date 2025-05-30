@@ -10,6 +10,7 @@ export default function VideoSlider() {
   const [videoList, setVideoList] = useState([]);
   const [startIndex, setStartIndex] = useState(0);
   const videoRefs = useRef({});
+  const [isMuted, setIsMuted] = useState(true);
 
   let visibleVideos = videoList.slice(startIndex, startIndex + MAX_VIDEOS);
 
@@ -49,7 +50,7 @@ export default function VideoSlider() {
       const currentVideo = videoRefs.current[selected];
       if (currentVideo) {
         console.log("Playing video at index:", selected);
-        currentVideo.muted = true;
+        currentVideo.muted = isMuted;
         currentVideo
           .play()
           .catch((err) => console.warn("Autoplay failed", err));
@@ -108,6 +109,14 @@ export default function VideoSlider() {
                     if (el) {
                       console.log("Setting ref for video index:", index);
                       videoRefs.current[index] = el;
+                      if (index === 0) {
+                        el.addEventListener("volumechange", () => {
+                          if (!el.muted) {
+                            console.log("First video unmuted by user, unmuting all videos");
+                            setIsMuted(false);
+                          }
+                        });
+                      }
                     } else {
                       delete videoRefs.current[index];
                     }
@@ -115,7 +124,7 @@ export default function VideoSlider() {
                   src={src}
                   controls
                   autoPlay
-                  muted
+                  muted={isMuted}
                   playsInline
                   preload="auto"
                   onEnded={index === 0 ? handleVideoEnd : undefined}
