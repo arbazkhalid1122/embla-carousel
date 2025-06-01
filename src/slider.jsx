@@ -42,20 +42,23 @@ export default function VideoSlider() {
       const selected = emblaApi.selectedScrollSnap();
       console.log("Embla selected slide index:", selected);
 
-      Object.values(videoRefs.current).forEach((video) => {
-        console.log("Pausing video");
-        video?.pause?.();
-      });
+      // Pause all videos
+      Object.values(videoRefs.current).forEach((video) => video?.pause?.());
 
-      const currentVideo = videoRefs.current[selected];
+      const currentVideo = videoRefs.current[selected + startIndex];
       if (currentVideo) {
-        console.log("Playing video at index:", selected);
         currentVideo.muted = isMuted;
-        currentVideo
-          .play()
-          .catch((err) => console.warn("Autoplay failed", err));
+
+        // Attempt playback
+        const playPromise = currentVideo.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn("Autoplay failed", err);
+          });
+        }
       }
     };
+
 
     console.log("Setting up Embla onSelect event");
     emblaApi.on("select", onSelect);
@@ -65,6 +68,13 @@ export default function VideoSlider() {
       emblaApi?.off("select", onSelect);
     };
   }, [emblaApi, visibleVideos]);
+
+  useEffect(() => {
+    Object.values(videoRefs.current).forEach((video) => {
+      if (video) video.muted = isMuted;
+    });
+  }, [isMuted]);
+
 
   const goToNext = () => {
     console.log("Navigating to next video");
@@ -80,6 +90,9 @@ export default function VideoSlider() {
   };
 
   const goToPrev = () => {
+    Object.values(videoRefs.current).forEach((video) => {
+      if (video) video.muted = isMuted;
+    });
     console.log("Navigating to previous video");
     if (startIndex > 0) {
       setStartIndex((prev) => {
@@ -106,21 +119,19 @@ export default function VideoSlider() {
               {src ? (
                 <video
                   ref={(el) => {
+                    const realIndex = startIndex + index;
                     if (el) {
-                      console.log("Setting ref for video index:", index);
-                      videoRefs.current[index] = el;
-                      if (index === 0) {
-                        el.addEventListener("volumechange", () => {
-                          if (!el.muted) {
-                            console.log("First video unmuted by user, unmuting all videos");
-                            setIsMuted(false);
-                          }
-                        });
-                      }
+                      videoRefs.current[realIndex] = el;
+
+                      el.onvolumechange = () => {
+                        setIsMuted(el.muted); // Keep global state in sync
+                      };
                     } else {
-                      delete videoRefs.current[index];
+                      delete videoRefs.current[realIndex];
                     }
                   }}
+
+
                   src={src}
                   controls
                   autoPlay
