@@ -1,20 +1,17 @@
 import React, { useEffect, useState, useRef } from "react";
-import useEmblaCarousel from "embla-carousel-react";
 import { GrNext, GrPrevious } from "react-icons/gr";
 
 const videoJSON = "/videos1.json";
 const MAX_VIDEOS = 3;
 
 export default function VideoSlider() {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, skipSnaps: false });
   const [videoList, setVideoList] = useState([]);
   const [startIndex, setStartIndex] = useState(0);
   const videoRefs = useRef({});
   const [isMuted, setIsMuted] = useState(true);
+  const viewportRef = useRef(null);
 
   let visibleVideos = videoList.slice(startIndex, startIndex + MAX_VIDEOS);
-
-  // Always ensure 3 items
   if (visibleVideos.length < MAX_VIDEOS) {
     const padCount = MAX_VIDEOS - visibleVideos.length;
     visibleVideos = [...visibleVideos, ...Array(padCount).fill(null)];
@@ -36,38 +33,18 @@ export default function VideoSlider() {
   }, []);
 
   useEffect(() => {
-    if (!emblaApi) return;
+    // Pause all videos
+    Object.values(videoRefs.current).forEach((video) => video?.pause?.());
 
-    const onSelect = () => {
-      const selected = emblaApi.selectedScrollSnap();
-      console.log("Embla selected slide index:", selected);
-
-      // Pause all videos
-      Object.values(videoRefs.current).forEach((video) => video?.pause?.());
-
-      const currentVideo = videoRefs.current[selected + startIndex];
-      if (currentVideo) {
-        currentVideo.muted = isMuted;
-
-        // Attempt playback
-        const playPromise = currentVideo.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((err) => {
-            console.warn("Autoplay failed", err);
-          });
-        }
-      }
-    };
-
-
-    console.log("Setting up Embla onSelect event");
-    emblaApi.on("select", onSelect);
-    onSelect();
-
-    return () => {
-      emblaApi?.off("select", onSelect);
-    };
-  }, [emblaApi, visibleVideos]);
+    // Play the first visible video
+    const currentVideo = videoRefs.current[startIndex];
+    if (currentVideo) {
+      currentVideo.muted = isMuted;
+      currentVideo.play().catch((err) => {
+        console.warn("Autoplay failed", err);
+      });
+    }
+  }, [startIndex]);
 
   useEffect(() => {
     Object.values(videoRefs.current).forEach((video) => {
@@ -75,44 +52,58 @@ export default function VideoSlider() {
     });
   }, [isMuted]);
 
-
   const goToNext = () => {
     console.log("Navigating to next video");
     if (startIndex < videoList.length - 1) {
-      setStartIndex((prev) => {
-        const next = prev + 1;
-        console.log("Updated start index:", next);
-        return next;
-      });
-    } else {
-      console.log("Already at the last video");
+      setStartIndex((prev) => prev + 1);
     }
   };
 
   const goToPrev = () => {
-    Object.values(videoRefs.current).forEach((video) => {
-      if (video) video.muted = isMuted;
-    });
     console.log("Navigating to previous video");
     if (startIndex > 0) {
-      setStartIndex((prev) => {
-        const next = prev - 1;
-        console.log("Updated start index:", next);
-        return next;
-      });
-    } else {
-      console.log("Already at the first video");
+      setStartIndex((prev) => prev - 1);
     }
   };
 
   const handleVideoEnd = () => {
-    console.log("Video ended, moving to next");
     goToNext();
   };
 
+  // ✅ Swipe detection
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    const onTouchStart = (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    };
+
+    const onTouchEnd = (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      const diffX = touchEndX - touchStartX;
+
+      if (Math.abs(diffX) > 50) {
+        if (diffX < 0) goToNext(); // swipe left
+        else goToPrev(); // swipe right
+      }
+    };
+
+    viewport.addEventListener("touchstart", onTouchStart);
+    viewport.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+      viewport.removeEventListener("touchstart", onTouchStart);
+      viewport.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [startIndex, videoList.length]);
+
   return (
     <div className="embla">
-      <div className="embla__viewport" ref={emblaRef}>
+      <div className="embla__viewport" ref={viewportRef}>
         <div className="embla__container">
           {visibleVideos.map((src, index) => (
             <div className="embla__slide" key={startIndex + index}>
@@ -122,16 +113,11 @@ export default function VideoSlider() {
                     const realIndex = startIndex + index;
                     if (el) {
                       videoRefs.current[realIndex] = el;
-
-                      el.onvolumechange = () => {
-                        setIsMuted(el.muted); // Keep global state in sync
-                      };
+                      el.onvolumechange = () => setIsMuted(el.muted);
                     } else {
                       delete videoRefs.current[realIndex];
                     }
                   }}
-
-
                   src={src}
                   controls
                   autoPlay
@@ -146,7 +132,6 @@ export default function VideoSlider() {
               )}
             </div>
           ))}
-
         </div>
       </div>
       <GrPrevious className="embla__button embla__button--prev" onClick={goToPrev} />
