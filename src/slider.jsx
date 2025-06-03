@@ -101,6 +101,19 @@ export default function VideoSlider() {
     };
   }, [startIndex, videoList.length]);
 
+
+  useEffect(() => {
+    const preloadNext = startIndex + MAX_VIDEOS;
+    for (let i = preloadNext; i < preloadNext + 2 && i < videoList.length; i++) {
+      const link = document.createElement("link");
+      link.rel = "preload";
+      link.as = "video";
+      link.href = videoList[i];
+      document.head.appendChild(link);
+    }
+  }, [startIndex, videoList]);
+
+
   return (
     <div className="embla">
       <div className="embla__viewport" ref={viewportRef}>
