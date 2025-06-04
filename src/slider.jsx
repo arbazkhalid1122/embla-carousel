@@ -40,9 +40,7 @@ export default function VideoSlider() {
     const currentVideo = videoRefs.current[startIndex];
     if (currentVideo) {
       currentVideo.muted = isMuted;
-      currentVideo.play().catch((err) => {
-        console.warn("Autoplay failed", err);
-      });
+      currentVideo.play()
     }
   }, [startIndex]);
 
