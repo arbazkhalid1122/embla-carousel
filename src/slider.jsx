@@ -125,6 +125,16 @@ export default function VideoSlider() {
                   muted={isMuted}
                   playsInline
                   preload="auto"
+                  onPause={() => {
+                    const current = videoRefs.current[startIndex + index];
+                    if (current && !current.muted) {
+                      Object.entries(videoRefs.current).forEach(([key, vid]) => {
+                        if (parseInt(key) !== startIndex + index && vid && !vid.paused) {
+                          vid.pause();
+                        }
+                      });
+                    }
+                  }}
                   onEnded={index === 0 ? handleVideoEnd : undefined}
                   className="video"
                 />
