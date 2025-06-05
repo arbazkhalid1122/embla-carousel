@@ -12,16 +12,21 @@ export default function VideoSlider() {
   const viewportRef = useRef(null);
 
   useEffect(() => {
+    console.log("Component mounted");
     const loadVideos = async () => {
       try {
         const res = await fetch(videoJSON);
         const data = await res.json();
         setVideoList(data);
+        console.log("Loaded videos:", data);
       } catch (err) {
         console.error("Failed to load videos", err);
       }
     };
     loadVideos();
+    return () => {
+      console.log("Component unmounted");
+    };
   }, []);
 
   useEffect(() => {
@@ -30,9 +35,11 @@ export default function VideoSlider() {
         video.muted = isMuted;
       }
     });
+    console.log("Mute state changed:", isMuted);
   }, [isMuted]);
 
   const goToNext = () => {
+    console.log("Navigated to next video");
     if (startIndex < videoList.length - 1) {
       Object.values(videoRefs.current).forEach((video) => {
         if (video) {
@@ -44,6 +51,7 @@ export default function VideoSlider() {
   };
 
   const goToPrev = () => {
+    console.log("Navigated to previous video");
     if (startIndex > 0) {
       Object.values(videoRefs.current).forEach((video) => {
         if (video) {
@@ -55,6 +63,7 @@ export default function VideoSlider() {
   };
 
   const handleVideoEnd = () => {
+    console.log("Video ended, moving to next");
     goToNext();
   };
 
@@ -67,11 +76,13 @@ export default function VideoSlider() {
 
     const onTouchStart = (e) => {
       touchStartX = e.changedTouches[0].screenX;
+      console.log("Touch start:", touchStartX);
     };
 
     const onTouchEnd = (e) => {
       touchEndX = e.changedTouches[0].screenX;
       const diffX = touchEndX - touchStartX;
+      console.log("Touch end:", touchEndX, "Diff:", diffX);
 
       if (Math.abs(diffX) > 50) {
         if (diffX < 0) goToNext(); // swipe left
@@ -99,6 +110,7 @@ export default function VideoSlider() {
       });
       videoRefs.current[startIndex].play();
       videoRefs.current[startIndex].muted = isMuted;
+      console.log("Playing video at index:", startIndex);
     }
   }, [startIndex, isMuted, videoList]);
 
@@ -106,6 +118,7 @@ export default function VideoSlider() {
     if (videoList.length > 0 && videoRefs.current[0]) {
       videoRefs.current[0].play();
       videoRefs.current[0].muted = isMuted;
+      console.log("First video auto-played");
     }
   }, [videoList, isMuted]);
 
@@ -142,6 +155,7 @@ export default function VideoSlider() {
                 onEnded={index === 0 ? handleVideoEnd : undefined}
                 onVolumeChange={(e) => {
                   setIsMuted(e.target.muted);
+                  console.log("Volume/mute changed on video at index:", startIndex + index, "Muted:", e.target.muted);
                 }}
                 className="video"
               />
