@@ -11,19 +11,11 @@ export default function VideoSlider() {
   const [isMuted, setIsMuted] = useState(true);
   const viewportRef = useRef(null);
 
-  let visibleVideos = videoList.slice(startIndex, startIndex + MAX_VIDEOS);
-  if (visibleVideos.length < MAX_VIDEOS) {
-    const padCount = MAX_VIDEOS - visibleVideos.length;
-    visibleVideos = [...visibleVideos, ...Array(padCount).fill(null)];
-  }
-
   useEffect(() => {
     const loadVideos = async () => {
       try {
-        console.log("Fetching video list from", videoJSON);
         const res = await fetch(videoJSON);
         const data = await res.json();
-        console.log("Video list loaded:", data);
         setVideoList(data);
       } catch (err) {
         console.error("Failed to load videos", err);
@@ -33,33 +25,31 @@ export default function VideoSlider() {
   }, []);
 
   useEffect(() => {
-    // Pause all videos
-    Object.values(videoRefs.current).forEach((video) => video?.pause?.());
-
-    // Play the first visible video
-    const currentVideo = videoRefs.current[startIndex];
-    if (currentVideo) {
-      currentVideo.muted = isMuted;
-      currentVideo.play()
-    }
-  }, [startIndex]);
-
-  useEffect(() => {
     Object.values(videoRefs.current).forEach((video) => {
-      if (video) video.muted = isMuted;
+      if (video) {
+        video.muted = isMuted;
+      }
     });
   }, [isMuted]);
 
   const goToNext = () => {
-    console.log("Navigating to next video");
     if (startIndex < videoList.length - 1) {
+      Object.values(videoRefs.current).forEach((video) => {
+        if (video) {
+          video.pause();
+        }
+      });
       setStartIndex((prev) => prev + 1);
     }
   };
 
   const goToPrev = () => {
-    console.log("Navigating to previous video");
     if (startIndex > 0) {
+      Object.values(videoRefs.current).forEach((video) => {
+        if (video) {
+          video.pause();
+        }
+      });
       setStartIndex((prev) => prev - 1);
     }
   };
@@ -68,7 +58,6 @@ export default function VideoSlider() {
     goToNext();
   };
 
-  // ✅ Swipe detection
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -99,8 +88,26 @@ export default function VideoSlider() {
     };
   }, [startIndex, videoList.length]);
 
+  const visibleVideos = videoList.slice(startIndex, startIndex + MAX_VIDEOS);
 
+  useEffect(() => {
+    if (videoRefs.current[startIndex]) {
+      Object.values(videoRefs.current).forEach((video) => {
+        if (video) {
+          video.pause();
+        }
+      });
+      videoRefs.current[startIndex].play();
+      videoRefs.current[startIndex].muted = isMuted;
+    }
+  }, [startIndex, isMuted, videoList]);
 
+  useEffect(() => {
+    if (videoList.length > 0 && videoRefs.current[0]) {
+      videoRefs.current[0].play();
+      videoRefs.current[0].muted = isMuted;
+    }
+  }, [videoList, isMuted]);
 
   return (
     <div className="embla">
@@ -108,39 +115,41 @@ export default function VideoSlider() {
         <div className="embla__container">
           {visibleVideos.map((src, index) => (
             <div className="embla__slide" key={startIndex + index}>
-              {src ? (
-                <video
-                  ref={(el) => {
-                    const realIndex = startIndex + index;
-                    if (el) {
-                      videoRefs.current[realIndex] = el;
-                      el.onvolumechange = () => setIsMuted(el.muted);
-                    } else {
-                      delete videoRefs.current[realIndex];
-                    }
-                  }}
-                  src={src}
-                  controls
-                  autoPlay
-                  muted={isMuted}
-                  playsInline
-                  preload="auto"
-                  onPause={() => {
-                    const current = videoRefs.current[startIndex + index];
-                    if (current && !current.muted) {
-                      Object.entries(videoRefs.current).forEach(([key, vid]) => {
-                        if (parseInt(key) !== startIndex + index && vid && !vid.paused) {
-                          vid.pause();
-                        }
-                      });
-                    }
-                  }}
-                  onEnded={index === 0 ? handleVideoEnd : undefined}
-                  className="video"
-                />
-              ) : (
-                <div className="video placeholder" />
-              )}
+              <video
+                ref={(el) => {
+                  const realIndex = startIndex + index;
+                  if (el) {
+                    videoRefs.current[realIndex] = el;
+                  } else {
+                    delete videoRefs.current[realIndex];
+                  }
+                }}
+                src={src}
+                controls
+                muted={isMuted}
+                playsInline
+                preload="auto"
+                onPause={() => {
+                  const current = videoRefs.current[startIndex];
+                  if (current && !current.muted) {
+                    Object.entries(videoRefs.current).forEach(([key, vid]) => {
+                      if (parseInt(key) !== startIndex && vid && !vid.paused) {
+                        vid.pause();
+                      }
+                    });
+                  }
+                }}
+                onEnded={index === 0 ? handleVideoEnd : undefined}
+                onVolumeChange={(e) => {
+                  setIsMuted(e.target.muted);
+                }}
+                className="video"
+              />
+            </div>
+          ))}
+          {Array(MAX_VIDEOS - visibleVideos.length).fill(null).map((_, index) => (
+            <div className="embla__slide" key={startIndex + visibleVideos.length + index}>
+              <div className="video placeholder" />
             </div>
           ))}
         </div>
