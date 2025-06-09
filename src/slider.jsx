@@ -108,16 +108,35 @@ export default function VideoSlider() {
           video.pause();
         }
       });
-      videoRefs.current[startIndex].play();
-      videoRefs.current[startIndex].muted = isMuted;
+      const currentVideo = videoRefs.current[startIndex];
+      currentVideo.muted = isMuted;
+      const playPromise = currentVideo.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          if (error.name === 'AbortError') {
+            console.log('Play was interrupted by a call to pause()');
+          } else {
+            console.error('Error playing video:', error);
+          }
+        });
+      }
       console.log("Playing video at index:", startIndex);
     }
   }, [startIndex, isMuted, videoList]);
 
   useEffect(() => {
     if (videoList.length > 0 && videoRefs.current[0]) {
-      videoRefs.current[0].play();
       videoRefs.current[0].muted = isMuted;
+      const playPromise = videoRefs.current[0].play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          if (error.name === 'AbortError') {
+            console.log('Play was interrupted by a call to pause()');
+          } else {
+            console.error('Error playing video:', error);
+          }
+        });
+      }
       console.log("First video auto-played");
     }
   }, [videoList, isMuted]);
